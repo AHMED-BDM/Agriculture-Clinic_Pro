@@ -12,9 +12,8 @@ import pickle
 st.set_page_config(page_title="Pro Ag-Clinic AI", page_icon="🌿", layout="wide")
 
 # ------------------------------------------------------------------------------
-# اللغة – زر في الشريط العلوي بدلاً من الـ sidebar
+# اللغة – زر في الشريط العلوي
 # ------------------------------------------------------------------------------
-# نضيف زر اختيار اللغة في العمود العلوي
 col_lang1, col_lang2, col_lang3 = st.columns([1, 1, 8])
 with col_lang2:
     lang = st.selectbox("", ["English", "العربية"], index=0, label_visibility="collapsed")
@@ -40,7 +39,6 @@ ui = {
     "footer": "© 2026 النظم الزراعية الذكية | قسم الزراعة الدقيقة" if is_ar else "© 2026 Smart Agri-Systems | Expert Module | Precision Agriculture Division",
     "download_report": "تحميل التقرير (HTML)" if is_ar else "Download Report (HTML)",
     "print_report": "طباعة التقرير" if is_ar else "Print Report",
-    # نصوص إضافية للتعليمات
     "how_to_title": "📖 كيفية الاستخدام" if is_ar else "📖 How to Use",
     "how_to_1": "1. اختر اللغة من القائمة العلوية." if is_ar else "1. Choose language from the top bar.",
     "how_to_2": "2. ارفع صورة واضحة لورقة النبات (JPG/PNG)." if is_ar else "2. Upload a clear leaf image (JPG/PNG).",
@@ -713,46 +711,51 @@ with c2:
         
         if st.button(ui["btn_analyze"]):
             with st.spinner(ui["spinner"]):
-                # Preprocess
-                proc_img = img.convert("RGB").resize((224, 224))
-                img_array = np.array(proc_img) / 255.0
-                img_array = np.expand_dims(img_array, axis=0)
-                
-                # Plant detection
-                plant_pred = plant_detector.predict(img_array, verbose=0)
-                plant_conf = float(plant_pred[0][0])
-                is_plant = plant_conf > PLANT_THRESHOLD
-                
-                if not is_plant:
-                    label = "UNKNOWN"
-                    best_conf = plant_conf
-                    if is_ar:
-                        st.warning("⚠️ الصورة لا تبدو وكأنها ورقة نبات. يرجى رفع صورة واضحة لأحد المحاصيل المدعومة (فلفل، بطاطس، طماطم).")
-                    else:
-                        st.warning("⚠️ The image does not appear to be a plant leaf. Please upload a clear image of a supported crop (pepper, potato, tomato).")
-                else:
-                    # Disease classification
-                    raw_preds = disease_model.predict(img_array, verbose=0)
-                    best_idx = np.argmax(raw_preds)
-                    best_conf = float(np.max(raw_preds))
-                    label = class_names[best_idx]
+                try:
+                    # Preprocess
+                    proc_img = img.convert("RGB").resize((224, 224))
+                    img_array = np.array(proc_img) / 255.0
+                    img_array = np.expand_dims(img_array, axis=0)
                     
-                    if best_conf < DISEASE_THRESHOLD:
+                    # Plant detection
+                    plant_pred = plant_detector.predict(img_array, verbose=0)
+                    plant_conf = float(plant_pred[0][0])
+                    is_plant = plant_conf > PLANT_THRESHOLD
+                    
+                    if not is_plant:
                         label = "UNKNOWN"
+                        best_conf = plant_conf
                         if is_ar:
-                            st.warning("⚠️ لم يتم التعرف على المرض بدقة كافية. قد تكون الصورة غير واضحة أو تحتوي على إصابة غير نمطية.")
+                            st.warning("⚠️ الصورة لا تبدو وكأنها ورقة نبات. يرجى رفع صورة واضحة لأحد المحاصيل المدعومة (فلفل، بطاطس، طماطم).")
                         else:
-                            st.warning("⚠️ The disease could not be identified with enough confidence. The image may be unclear or show an atypical infection.")
+                            st.warning("⚠️ The image does not appear to be a plant leaf. Please upload a clear image of a supported crop (pepper, potato, tomato).")
                     else:
-                        identified_text = arabic_classes.get(label, label) if is_ar else label.replace('___', ' | ')
-                        st.success(f"{identified_text} ✓")
+                        # Disease classification
+                        raw_preds = disease_model.predict(img_array, verbose=0)
+                        best_idx = np.argmax(raw_preds)
+                        best_conf = float(np.max(raw_preds))
+                        label = class_names[best_idx]
+                        
+                        if best_conf < DISEASE_THRESHOLD:
+                            label = "UNKNOWN"
+                            if is_ar:
+                                st.warning("⚠️ لم يتم التعرف على المرض بدقة كافية. قد تكون الصورة غير واضحة أو تحتوي على إصابة غير نمطية.")
+                            else:
+                                st.warning("⚠️ The disease could not be identified with enough confidence. The image may be unclear or show an atypical infection.")
+                        else:
+                            identified_text = arabic_classes.get(label, label) if is_ar else label.replace('___', ' | ')
+                            st.success(f"{identified_text} ✓")
+                    
+                    # Generate report
+                    full_report = get_detailed_report(label, t_input, s_input_raw, w_input_raw, best_conf, is_ar)
+                    st.session_state.saved_report = full_report
+                    st.session_state.analysis_done = True
+                    st.rerun()  # Force a rerun to ensure the report is displayed
                 
-                # Generate report
-                full_report = get_detailed_report(label, t_input, s_input_raw, w_input_raw, best_conf, is_ar)
-                st.session_state.saved_report = full_report
-                st.session_state.analysis_done = True
+                except Exception as e:
+                    st.error(f"An error occurred: {str(e)}")
         
-        # عرض التقرير
+        # عرض التقرير إذا تم التحليل
         if st.session_state.analysis_done and st.session_state.saved_report:
             st.markdown("---")
             st.markdown("**📊 نتائج التحليل**" if is_ar else "**📊 Analysis Results**")
