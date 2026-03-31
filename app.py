@@ -47,19 +47,16 @@ if "analysis_done" not in st.session_state:
     st.session_state.analysis_done = False
 
 # Confidence thresholds
-PLANT_THRESHOLD = 0.7      # minimum confidence to consider image as plant
-DISEASE_THRESHOLD = 0.6    # if disease confidence below this, treat as unknown
+PLANT_THRESHOLD = 0.7
+DISEASE_THRESHOLD = 0.6
 
 # ------------------------------------------------------------------------------
 # Load models and class names (cached)
 # ------------------------------------------------------------------------------
 @st.cache_resource
 def load_models():
-    # Binary plant detector
     plant_detector = tf.keras.models.load_model('plant_detector.keras')
-    # Disease classifier
     disease_model = tf.keras.models.load_model('Fplant_model.keras')
-    # Class names
     with open('class_names.pkl', 'rb') as f:
         class_names = pickle.load(f)
     return plant_detector, disease_model, class_names
@@ -86,15 +83,13 @@ arabic_classes = {
 }
 
 # ------------------------------------------------------------------------------
-# Helper: get detailed report (same as before)
+# Detailed report generator (fully rewritten for professional quality)
 # ------------------------------------------------------------------------------
 def get_detailed_report(disease, temp, soil, water, conf, is_ar):
-    disease_en = disease.replace("_", " ")
-    disease_ar = arabic_classes.get(disease, disease_en)
-
+    # Handle unknown case
     if disease == "UNKNOWN":
         if is_ar:
-            html = f"""<div class="report-container">
+            return f"""<div class="report-container">
 <h2 style="text-align: center;">📋 تقرير العيادة الزراعية المعتمد</h2>
 <p style="text-align: center; opacity:0.7;">المهندس الزراعي المعتمد: أحمد عبد الحافظ</p>
 <hr>
@@ -119,7 +114,7 @@ def get_detailed_report(disease, temp, soil, water, conf, is_ar):
 <p style="font-style: italic;"><strong>القرار الهندسي النهائي:</strong> الثقة منخفضة جدًا، لا يمكن تقديم توصيات علاجية. يُرجى التأكد من صحة العينة.</p>
 </div>"""
         else:
-            html = f"""<div class="report-container">
+            return f"""<div class="report-container">
 <h2 style="text-align: center;">📋 CERTIFIED AGRICULTURE CLINIC REPORT</h2>
 <p style="text-align: center; opacity:0.7;">Certified Agricultural Engineer: Ahmed Abd Al-Hafez</p>
 <hr>
@@ -143,22 +138,295 @@ def get_detailed_report(disease, temp, soil, water, conf, is_ar):
 <hr>
 <p style="font-style: italic;"><strong>Final Engineering Verdict:</strong> Confidence is too low to provide treatment recommendations. Please verify the sample.</p>
 </div>"""
-        return html
 
-    # ... (rest of the detailed report function remains unchanged) ...
-    # For brevity, I'll include only the skeleton here. 
-    # In the final answer, we'll include the full function from the original code.
-    # Since it's long, I'll reference it. But for the answer I'll include the full function from the original.
-    # In practice, we'll copy the existing get_detailed_report from the original code.
+    # Prepare disease names
+    disease_en = disease.replace("_", " ")
+    disease_ar = arabic_classes.get(disease, disease_en)
 
-# I will insert the full get_detailed_report from the original code here. 
-# To keep this answer concise, I'll note that it should be the same as before.
+    # Start building HTML report
+    if is_ar:
+        html = f"""<div class="report-container">
+<h2 style="text-align: center;">📋 تقرير العيادة الزراعية المعتمد</h2>
+<p style="text-align: center; opacity:0.7;">المهندس الزراعي المعتمد: أحمد عبد الحافظ</p>
+<hr>
+<p><strong>التشخيص الأساسي:</strong> {disease_ar}</p>
+<p><strong>دقة النموذج الإحصائي:</strong> {conf*100:.2f}%</p>
+<p><strong>الظروف الحقلية المسجلة:</strong> درجة الحرارة: {temp}°C | نوع التربة: {soil} | مستوى الري: {water}</p>
+<hr>
+"""
 
-# For the answer, I'll provide a placeholder. In a real implementation, you would paste the entire function.
-# Since this is a text response, I'll assume it's included.
+        # ----- التوصيات حسب المرض -----
+        if "healthy" in disease:
+            html += """
+<h3>✅ التقييم الفسيولوجي – سليم</h3>
+<p>العينة المدروسة تظهر <strong>كفاءة تمثيل ضوئي ممتازة</strong> وغياب أي علامات إجهاد حيوي أو غير حيوي. الجهاز الوعائي يعمل بكفاءة عالية. لا توجد أعراض مرضية ظاهرة على الأوراق أو الساق.</p>
+<h4>📌 توصيات إستراتيجية للحفاظ على الصحة النباتية:</h4>
+<ul>
+<li><strong>التوازن الغذائي الدقيق:</strong> الحفاظ على نسب N-P-K متوازنة (1:1:1 خلال النمو الخضري، ثم 1:2:2 بعد التزهير). التركيز على إضافة الكالسيوم (نترات الكالسيوم 2-3 كجم/1000 م²) والبورون (حمض البوريك 0.5-1 جم/لتر) لضمان جودة الثمار ومنع ظاهرة تعفن الطرف الزهري.</li>
+<li><strong>المنشطات الحيوية:</strong> تطبيق الأحماض الأمينية (1 لتر/فدان) وهيمات البوتاسيوم (2-3 كجم/فدان) لتحسين امتصاص الجذور وزيادة مقاومة الإجهادات البيئية (الحرارة، الملوحة، الجفاف).</li>
+<li><strong>المراقبة الوقائية:</strong> الفحص الحقل المنتظم كل 48 ساعة لاكتشاف أي تجمعات مبكرة للآفات. استخدام المصائد اللاصقة الصفراء (15-20 مصيدة/فدان) لمراقبة الذبابة البيضاء والمن. تركيب شبكات حشرية (50 ميكرون) على مداخل الصوبات.</li>
+<li><strong>إدارة الري:</strong> الري بالتنقيط للحفاظ على جفاف الأوراق. الري صباحاً للسماح بتبخر الرطوبة. في الأراضي الثقيلة، إدخال فترات جفاف بين الريات لتهوية الجذور وتجنب الإجهاد الناتج عن نقص الأكسجين.</li>
+<li><strong>توصيات مستقبلية:</strong> تحليل التربة سنوياً لتعديل برامج التسميد. اعتماد أصناف مقاومة للأمراض السائدة في الموسم التالي.</li>
+</ul>"""
+
+        elif "Late_blight" in disease:
+            html += """
+<h3>🚨 إنذار مرضي – الندوة المتأخرة (Phytophthora infestans)</h3>
+<p><strong>المسبب:</strong> فطر بيضي (Oomycete) يتطور بسرعة في الرطوبة الجوية >90% ودرجات حرارة معتدلة (15-25°م). يمكنه القضاء على الحقل بالكامل خلال 7-10 أيام في الظروف الملائمة. ينتشر بواسطة الجراثيم التي تنتقل بالرياح والمياه.</p>
+<p><strong>الأعراض التفصيلية:</strong> بقع مائية خضراء داكنة على الأوراق، تتحول إلى بنية سوداء مع هالة صفراء. على الساق تظهر بقع بنية مستطيلة. في الأجواء الرطبة، ينمو عشب أبيض (الجراثيم) على السطح السفلي للأوراق. الثمار تصاب ببقع بنية زيتية لامعة تؤدي إلى تعفن الثمار.</p>
+<h4>🛠️ خطة المكافحة المتكاملة (الطوارئ):</h4>
+<p><strong>1. التدخل الكيميائي العاجل (بالتناوب لتجنب المقاومة):</strong></p>
+<ul>
+<li><strong>ميتالاكسيل-إم + مانكوزيب</strong> (ريدوميل جولد) 250 جم/100 لتر – وقائي وعلاجي مبكر.</li>
+<li><strong>سيموكسانيل + فاموكسادون</strong> (تاكوس) – تأثير علاجي قوي.</li>
+<li><strong>بروباموكارب هيدروكلوريد</strong> (بروليفي) 150 مل/100 لتر – يحمي الجذور والساق.</li>
+<li><strong>فوسيتيل-ألومنيوم</strong> (أليت) 200 جم/100 لتر – منشط مناعي.</li>
+<li><strong>الرش كل 5-7 أيام، بالتناوب، مع مادة لاصقة (سيلكيت 0.5 مل/لتر).</strong></li>
+</ul>
+<p><strong>2. الإدارة الحقلية:</strong></p>
+<ul>
+<li><strong>الرطوبة:</strong> وقف الري بالرش فوراً، التحول إلى الري بالتنقيط، زيادة التهوية في الصوب.</li>
+<li><strong>النظافة:</strong> قلع النباتات المصابة بشدة وحرقها خارج الحقل. تطهير الأدوات بالكحول 70% أو هيبوكلوريت الصوديوم.</li>
+<li><strong>الدورة الزراعية:</strong> عدم زراعة محاصيل العائلة الباذنجانية (بطاطس، طماطم، فلفل) في نفس الحقل لمدة 3 سنوات على الأقل.</li>
+</ul>
+<p><strong>3. المكافحة الحيوية:</strong> رش مستحضرات تحتوي على <em>Trichoderma harzianum</em> أو <em>Bacillus subtilis</em> للحد من استمرار الفطر في التربة.</p>"""
+
+        elif "Early_blight" in disease:
+            html += """
+<h3>🍂 الندوة المبكرة (Alternaria solani)</h3>
+<p>مرض فطري شائع يظهر على الأوراق السفلية أولاً. البقع بنية داكنة ذات حلقات متحدة المركز تشبه هدف الرماية. ينتشر في درجات الحرارة الدافئة (25-30°م) والرطوبة المتوسطة.</p>
+<h4>🛠️ خطة المكافحة:</h4>
+<ul>
+<li><strong>الإجراءات الثقافية:</strong> إزالة الأوراق السفلية المصابة، تحسين التهوية، الري بالتنقيط، تغطية التربة (المشش) لمنع تطاير الجراثيم.</li>
+<li><strong>المكافحة الكيميائية:</strong> رش مبيدات تحتوي على (كلوروثالونيل، مانكوزيب، أو ديفينوكونازول) كل 7-10 أيام.</li>
+<li><strong>التوصيات العضوية:</strong> يمكن استخدام مستخلص الثوم أو زيت النيم كبديل وقائي.</li>
+</ul>"""
+
+        elif "Bacterial_spot" in disease:
+            html += """
+<h3>🦠 التبقع البكتيري (Xanthomonas spp.)</h3>
+<p>مرض بكتيري خطير يسبب بقع صغيرة مائية تتحول إلى بنية غامقة مع هالة صفراء. تنتقل البكتيريا بواسطة رذاذ الماء والأدوات الملوثة والحشرات.</p>
+<h4>🛠️ خطة المكافحة:</h4>
+<ul>
+<li><strong>الري:</strong> تجنب الري العلوي تماماً، استخدم الري بالتنقيط.</li>
+<li><strong>التطهير:</strong> تعقيم أدوات التقليم بمحلول 10% كلور، إزالة النباتات المصابة بشدة.</li>
+<li><strong>المكافحة الكيميائية:</strong> رش مركبات النحاس (هيدروكسيد النحاس، أوكسي كلورور النحاس) بالتناوب مع المضادات الحيوية الحيوية (كاسوجاميسين) حيث يسمح بذلك.</li>
+<li><strong>الوقاية:</strong> استخدام بذور وشتلات خالية من المرض، وتجنب الزراعة الكثيفة.</li>
+</ul>"""
+
+        elif "Spider_mites" in disease:
+            html += """
+<h3>🕷️ العنكبوت الأحمر ذو البقعتين (Tetranychus urticae)</h3>
+<p>آفة دقيقة تمتص عصارة الأوراق مسببة بقع صفراء صغيرة ثم جفاف كامل. تفضل الظروف الحارة والجافة.</p>
+<h4>🛠️ الإدارة المتكاملة:</h4>
+<ul>
+<li><strong>المكافحة الحيوية:</strong> إطلاق المفترس <em>Phytoseiulus persimilis</em> (10 أفراد/م²) عند أول إصابة.</li>
+<li><strong>المكافحة الكيميائية:</strong> استخدام مبيدات أكاروسية متخصصة مثل (أبامكتين، سبيروميسيفين، هيكسيثياوكس) مع مراعاة التناوب.</li>
+<li><strong>البيئة:</strong> رفع الرطوبة حول النبات بالرش بالماء (إن أمكن) لخلق ظروف غير مناسبة للعناكب.</li>
+<li><strong>النظافة:</strong> إزالة الأعشاب الضارة لأنها عوائل بديلة.</li>
+</ul>"""
+
+        elif "Virus" in disease or "mosaic" in disease or "YellowLeaf" in disease:
+            html += """
+<h3>🚫 عدوى فيروسية جهازية</h3>
+<p>الفيروسات (مثل فيروس تجعد الأصفرار، فيروس الموزاييك) تنتقل بواسطة الحشرات (الذبابة البيضاء، المن، التربس) أو الأدوات الملوثة. لا يوجد علاج كيميائي للنبات المصاب.</p>
+<h4>🛠️ استراتيجية السيطرة (الوقاية خير من العلاج):</h4>
+<ul>
+<li><strong>مكافحة الناقل:</strong> استخدام مبيدات حشرية جهازية (إيميداكلوبريد، أسيتاميبريد) بالتناوب مع مبيدات تماس، مع وضع مصائد لاصقة صفراء.</li>
+<li><strong>الاستئصال:</strong> قلع النباتات المصابة فوراً وحرقها خارج الحقل.</li>
+<li><strong>الوقاية:</strong> استخدام شبكات حشرية (50 ميكرون) على الصوب، تعقيم الأدوات، شراء شتلات خالية من الفيروسات.</li>
+</ul>"""
+
+        elif "Leaf_Mold" in disease or "Septoria" in disease or "Target_Spot" in disease:
+            html += """
+<h3>🍄 أمراض الرطوبة والتبقعات الورقية</h3>
+<p>تنتج عن فطريات تزدهر في الرطوبة العالية وسوء التهوية. تظهر بقع بنية أو صفراء مع هالات.</p>
+<h4>🛠️ التوصيات:</h4>
+<ul>
+<li><strong>التهوية:</strong> تقليم الأوراق الكثيفة، فتح نوافذ الصوب، خفض كثافة الزراعة.</li>
+<li><strong>الري:</strong> الري صباحاً وتجنب بلل الأوراق.</li>
+<li><strong>المكافحة الكيميائية:</strong> رش مبيدات فطرية جهازية ووقائية (أزوكسيستروبين، تيبوكونازول، كلوروثالونيل).</li>
+<li><strong>الزراعة:</strong> استخدام أصناف مقاومة إن وجدت.</li>
+</ul>"""
+
+        else:
+            # عام للمرض غير المحدد أعلاه
+            html += f"""
+<h3>🍄 التشخيص: {disease_ar}</h3>
+<p>بقع نخرية على الأوراق ناتجة عن مسببات فطرية أو بكتيرية. يعتمد العلاج على المسبب الدقيق ولكن يمكن اتباع البروتوكول العام التالي.</p>
+<h4>🛠️ توصيات الخبراء للسيطرة:</h4>
+<ul>
+<li><strong>المكافحة الكيميائية (عند ظهور الأعراض):</strong> كلوروثالونيل، أزوكسيستروبين، أوكسي كلورور النحاس، مانكوزيب.</li>
+<li><strong>الإجراءات الثقافية:</strong> تقليم الأوراق المصابة، تجنب الري بالرش، التغطية بالبلاستيك، تناوب المحاصيل.</li>
+<li><strong>المكافحة الحيوية:</strong> رش مستحضرات <em>Bacillus subtilis</em> أو <em>Trichoderma</em>.</li>
+</ul>"""
+
+        # إضافة توصيات بيئية حسب المدخلات
+        html += "<h4>🌍 عوامل الذكاء البيئي وتوصيات مكيفة:</h4>"
+        if temp > 38:
+            html += f"<p>⚠️ <strong>إجهاد حراري ({temp}°م):</strong> استخدام <strong>سليكات البوتاسيوم</strong> (2 مل/لتر) لتقوية جدر الخلايا وتقليل النتح. رش الأحماض الأمينية والجبرلين لتخفيف الإجهاد. زيادة الري ليلاً لتبريد منطقة الجذور.</p>"
+        elif temp < 10:
+            html += f"<p>❄️ <strong>إجهاد برودة ({temp}°م):</strong> استخدام أغطية بلاستيكية ليلاً. رش سترات الكالسيوم لتعزيز صلابة النبات. تقليل الري لتجنب تعفن الجذور.</p>"
+        else:
+            html += f"<p>✅ درجة الحرارة الحالية ({temp}°م) ضمن النطاق المناسب للنمو. استمر في المراقبة.</p>"
+
+        if soil == "طينية" and water in ["عالي", "مشبع بالمياه"]:
+            html += "<p>⚠️ <strong>ميكانيكا التربة:</strong> خطر مرتفع لحدوث <strong>نقص الأكسجين (Hypoxia)</strong> وعفن الجذور في التربة الثقيلة. إضافة مادة عضوية (كمبوست) لتحسين الصرف. إطالة فترات الجفاف بين الريات. استخدام مراوح تهوية في الصوب لزيادة الأكسجين حول الجذور.</p>"
+        elif soil == "رملية" and water == "منخفض":
+            html += "<p>💧 <strong>إجهاد جفاف:</strong> التربة الرملية تستنزف الماء بسرعة. النبات يقترب من نقطة الذبول الدائم. زيادة وتيرة الري مع تقليل الكمية (الري المتكرر الخفيف). إضافة مواد حافظة للرطوبة مثل البوليمرات الماصة أو الكمبوست لتحسين احتفاظ التربة بالماء.</p>"
+        elif soil == "طينية" and water == "منخفض":
+            html += "<p>⚠️ <strong>إجهاد جفاف في تربة ثقيلة:</strong> التربة الطينية قد تتشقق وتجف بسرعة رغم قدرتها على الاحتفاظ بالماء. التغطية العضوية (القش) حول النباتات للحفاظ على رطوبة التربة ومنع التبخر.</p>"
+        else:
+            html += "<p>✅ ظروف التربة والري مناسبة حالياً. استمر في البرنامج المتبع.</p>"
+
+        # خاتمة
+        html += f"""<hr>
+<p style="font-style: italic;"><strong>القرار الهندسي النهائي:</strong> مستوى الثقة {conf*100:.1f}%. التوصيات تستند إلى البروتوكولات الزراعية الدولية وممارسات الخبراء المعتمدة.</p>
+<p style="font-size: 0.9em;"><strong>ملاحظة مهمة:</strong> هذه التوصيات استشارية. يُرجى الرجوع إلى مهندس زراعي معتمد لتحديد الجرعات وفق ظروفك الحقلية والتشريعات المحلية.</p>
+</div>"""
+
+    else:  # English version
+        html = f"""<div class="report-container">
+<h2 style="text-align: center;">📋 CERTIFIED AGRICULTURE CLINIC REPORT</h2>
+<p style="text-align: center; opacity:0.7;">Certified Agricultural Engineer: Ahmed Abd Al-Hafez</p>
+<hr>
+<p><strong>Primary Diagnosis:</strong> {disease_en}</p>
+<p><strong>Statistical Confidence:</strong> {conf*100:.2f}%</p>
+<p><strong>Field Conditions:</strong> Temperature: {temp}°C | Soil: {soil} | Irrigation: {water}</p>
+<hr>
+"""
+
+        if "healthy" in disease:
+            html += """
+<h3>✅ Physiological Assessment – Healthy</h3>
+<p>The analyzed sample exhibits <strong>excellent photosynthetic efficiency</strong> and no signs of biotic or abiotic stress. The vascular system is fully functional. No disease symptoms are visible on leaves or stems.</p>
+<h4>📌 Strategic Recommendations for Plant Health Maintenance:</h4>
+<ul>
+<li><strong>Precise Nutritional Balance:</strong> Maintain balanced N-P-K ratios (1:1:1 vegetative, 1:2:2 after flowering). Apply Calcium (calcium nitrate 2-3 kg/1000 m²) and Boron (0.5-1 g/L) to prevent blossom end rot.</li>
+<li><strong>Biostimulants:</strong> Use amino acids (1 L/ha) and potassium humate (2-3 kg/ha) to enhance root absorption and stress tolerance.</li>
+<li><strong>Preventive Monitoring:</strong> Scout every 48 hours. Use yellow sticky traps (15-20/acre) for whiteflies and aphids. Install insect-proof nets (50 mesh).</li>
+<li><strong>Irrigation Management:</strong> Drip irrigation to keep foliage dry. Water in the morning. On heavy soils, allow dry periods between irrigations to avoid hypoxia.</li>
+<li><strong>Future Steps:</strong> Annual soil analysis. Use resistant cultivars.</li>
+</ul>"""
+
+        elif "Late_blight" in disease:
+            html += """
+<h3>🚨 Pathogen Alert – Late Blight (Phytophthora infestans)</h3>
+<p><strong>Etiology:</strong> An oomycete that thrives in high humidity (>90%) and moderate temperatures (15-25°C). Can destroy a field in 7-10 days. Spreads via wind‑ and water‑borne spores.</p>
+<p><strong>Detailed Symptoms:</strong> Dark, water‑soaked lesions on leaves turning brown‑black with yellow halo. Brown elongated lesions on stems. In humid conditions, white sporangial growth on leaf undersides. Fruits develop oily brown spots leading to rot.</p>
+<h4>🛠️ Integrated Management Plan (Emergency):</h4>
+<p><strong>1. Immediate Chemical Intervention (rotate products):</strong></p>
+<ul>
+<li><strong>Metalaxyl-M + Mancozeb</strong> (Ridomil Gold) 250 g/100 L – preventive and early curative.</li>
+<li><strong>Cymoxanil + Famoxadone</strong> (Tanos) – strong curative action.</li>
+<li><strong>Propamocarb Hydrochloride</strong> (Previcur) 150 ml/100 L – protects roots and stems.</li>
+<li><strong>Fosetyl-Aluminum</strong> (Aliette) 200 g/100 L – resistance inducer.</li>
+<li><strong>Apply every 5-7 days, alternating, with a sticker (Silwet 0.5 ml/L).</strong></li>
+</ul>
+<p><strong>2. Field Management:</strong></p>
+<ul>
+<li><strong>Humidity:</strong> Stop overhead irrigation immediately; switch to drip. Increase greenhouse ventilation.</li>
+<li><strong>Sanitation:</strong> Remove and burn severely infected plants. Disinfect tools with 70% alcohol or bleach.</li>
+<li><strong>Crop Rotation:</strong> Avoid planting Solanaceae crops in the same field for at least 3 years.</li>
+</ul>
+<p><strong>3. Biological Control:</strong> Apply <em>Trichoderma harzianum</em> or <em>Bacillus subtilis</em> to suppress soil‑borne inoculum.</p>"""
+
+        elif "Early_blight" in disease:
+            html += """
+<h3>🍂 Early Blight (Alternaria solani)</h3>
+<p>A common fungal disease affecting lower leaves first. Brown spots with concentric rings (target‑like). Favors warm temperatures (25-30°C) and moderate humidity.</p>
+<h4>🛠️ Management:</h4>
+<ul>
+<li><strong>Cultural:</strong> Remove infected lower leaves, improve aeration, drip irrigation, mulching.</li>
+<li><strong>Chemical:</strong> Apply fungicides containing chlorothalonil, mancozeb, or difenoconazole every 7-10 days.</li>
+<li><strong>Organic alternatives:</strong> Garlic extract or neem oil as preventive.</li>
+</ul>"""
+
+        elif "Bacterial_spot" in disease:
+            html += """
+<h3>🦠 Bacterial Spot (Xanthomonas spp.)</h3>
+<p>A serious bacterial disease causing small water‑soaked lesions turning dark with yellow halo. Spread by water splash, contaminated tools, and insects.</p>
+<h4>🛠️ Management:</h4>
+<ul>
+<li><strong>Irrigation:</strong> Avoid overhead watering; use drip irrigation.</li>
+<li><strong>Sanitation:</strong> Disinfect pruning tools (10% bleach), remove severely infected plants.</li>
+<li><strong>Chemical:</strong> Spray copper‑based products (copper hydroxide, copper oxychloride) alternating with kasugamycin where permitted.</li>
+<li><strong>Prevention:</strong> Use disease‑free seeds/seedlings, avoid dense planting.</li>
+</ul>"""
+
+        elif "Spider_mites" in disease:
+            html += """
+<h3>🕷️ Two‑Spotted Spider Mite (Tetranychus urticae)</h3>
+<p>Microscopic pest that sucks cell contents causing stippling, then leaf desiccation. Prefers hot, dry conditions.</p>
+<h4>Integrated Pest Management:</h4>
+<ul>
+<li><strong>Biological control:</strong> Release predatory mite <em>Phytoseiulus persimilis</em> (10 individuals/m²) at first sign.</li>
+<li><strong>Chemical control:</strong> Use specific acaricides (abamectin, spiromesifen, hexythiazox) with rotation.</li>
+<li><strong>Environmental:</strong> Increase humidity by misting (if possible) to discourage mites.</li>
+<li><strong>Weed removal:</strong> Eliminate alternative hosts.</li>
+</ul>"""
+
+        elif "Virus" in disease or "mosaic" in disease or "YellowLeaf" in disease:
+            html += """
+<h3>🚫 Systemic Viral Infection</h3>
+<p>Viruses (e.g., Tomato Yellow Leaf Curl Virus, Mosaic virus) transmitted by insects (whiteflies, aphids, thrips) or contaminated tools. No cure for infected plants.</p>
+<h4>🛠️ Control Strategy (Prevention is key):</h4>
+<ul>
+<li><strong>Vector control:</strong> Use systemic insecticides (imidacloprid, acetamiprid) alternating with contact products, plus yellow sticky traps.</li>
+<li><strong>Eradication:</strong> Immediately remove and burn infected plants.</li>
+<li><strong>Prevention:</strong> Install insect nets (50 mesh), disinfect tools, buy virus‑free seedlings.</li>
+</ul>"""
+
+        elif "Leaf_Mold" in disease or "Septoria" in disease or "Target_Spot" in disease:
+            html += """
+<h3>🍄 Humidity‑related Leaf Spots</h3>
+<p>Fungal diseases that thrive in high humidity and poor air circulation. Brown or yellow spots with halos.</p>
+<h4>🛠️ Recommendations:</h4>
+<ul>
+<li><strong>Ventilation:</strong> Prune dense foliage, open greenhouse vents, reduce planting density.</li>
+<li><strong>Irrigation:</strong> Water in the morning, avoid wetting leaves.</li>
+<li><strong>Chemical:</strong> Apply systemic and protective fungicides (azoxystrobin, tebuconazole, chlorothalonil).</li>
+<li><strong>Resistance:</strong> Use resistant varieties if available.</li>
+</ul>"""
+
+        else:
+            html += f"""
+<h3>🍄 Diagnosis: {disease_en}</h3>
+<p>Necrotic leaf lesions likely caused by fungal or bacterial pathogens. A general control protocol is provided below.</p>
+<h4>🛠️ Expert Recommendations:</h4>
+<ul>
+<li><strong>Chemical:</strong> Chlorothalonil, azoxystrobin, copper oxychloride, mancozeb.</li>
+<li><strong>Cultural:</strong> Prune infected leaves, avoid overhead irrigation, mulch, rotate crops.</li>
+<li><strong>Biological:</strong> Apply <em>Bacillus subtilis</em> or <em>Trichoderma</em>.</li>
+</ul>"""
+
+        # Environmental recommendations
+        html += "<h4>🌍 Environmental Intelligence Factors & Tailored Recommendations:</h4>"
+        if temp > 38:
+            html += f"<p>⚠️ <strong>Heat Stress ({temp}°C):</strong> Apply <strong>Potassium Silicate</strong> (2 ml/L) to strengthen cell walls. Spray amino acids and gibberellins. Increase night irrigation to cool roots.</p>"
+        elif temp < 10:
+            html += f"<p>❄️ <strong>Cold Stress ({temp}°C):</strong> Use plastic covers at night. Spray calcium citrate. Reduce irrigation.</p>"
+        else:
+            html += f"<p>✅ Current temperature ({temp}°C) is within optimal range. Continue monitoring.</p>"
+
+        if soil == "Clay" and water in ["High", "Waterlogged"]:
+            html += "<p>⚠️ <strong>Soil Mechanics:</strong> High risk of <strong>Hypoxia</strong> and root rot. Add organic matter (compost) to improve drainage. Increase dry periods between irrigations. Use ventilation fans in greenhouses.</p>"
+        elif soil == "Sandy" and water == "Low":
+            html += "<p>💧 <strong>Drought Stress:</strong> Sandy soils drain rapidly. Increase irrigation frequency with smaller amounts (light, frequent watering). Add moisture‑retaining materials like hydrogels or compost.</p>"
+        elif soil == "Clay" and water == "Low":
+            html += "<p>⚠️ <strong>Drought Stress in Heavy Soil:</strong> Clay soils may crack and dry quickly despite high water‑holding capacity. Apply organic mulch (straw) around plants to conserve moisture.</p>"
+        else:
+            html += "<p>✅ Soil and irrigation conditions are currently suitable. Continue your regular program.</p>"
+
+        html += f"""<hr>
+<p style="font-style: italic;"><strong>Final Engineering Verdict:</strong> Confidence level is {conf*100:.1f}%. Recommendations are based on international agronomic protocols and expert practices.</p>
+<p style="font-size: 0.9em;"><strong>Important Note:</strong> These recommendations are advisory. Always consult a certified agricultural engineer for precise dosages based on your field conditions and local regulations.</p>
+</div>"""
+
+    return html
 
 # ------------------------------------------------------------------------------
-# CSS and layout (same as before)
+# CSS styling (improved for smoother, more professional look)
 # ------------------------------------------------------------------------------
 direction = "rtl" if is_ar else "ltr"
 text_align = "right" if is_ar else "left"
@@ -175,7 +443,205 @@ img_base64 = get_base64_image("background.jpg")
 
 st.markdown(f"""
     <style>
-    /* Same CSS as before – we keep it identical */
+    @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&family=Segoe+UI:wght@400;500;700&display=swap');
+    
+    /* Global Reset */
+    * {{
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }}
+    
+    .stApp {{
+        background-image: url("data:image/jpeg;base64,{img_base64}");
+        background-size: cover;
+        background-position: center;
+        background-attachment: fixed;
+    }}
+    
+    /* Overlay for readability */
+    .stApp > div:first-child {{
+        background: rgba(255, 255, 255, 0.88) !important;
+        backdrop-filter: blur(2px);
+    }}
+    
+    /* Sidebar glassmorphism */
+    .stSidebar {{
+        background: rgba(255, 255, 255, 0.92) !important;
+        backdrop-filter: blur(10px);
+        border-right: 1px solid rgba(0,0,0,0.05);
+    }}
+    
+    /* Remove extra headers */
+    .stApp header, .stApp .st-emotion-cache-1r6slb0, [data-testid="stHeader"], [data-testid="stToolbar"] {{
+        background: transparent !important;
+    }}
+    
+    /* Columns */
+    .row-widget.stHorizontal {{
+        align-items: flex-start !important;
+    }}
+    
+    [data-testid="stColumn"] {{
+        background: rgba(255, 255, 255, 0.88);
+        border-radius: 24px;
+        padding: 1.5rem;
+        margin: 0.75rem 0;
+        box-shadow: 0 8px 20px rgba(0,0,0,0.05);
+        transition: all 0.3s ease;
+        height: auto !important;
+        align-self: flex-start;
+    }}
+    
+    [data-testid="stColumn"]:hover {{
+        box-shadow: 0 12px 28px rgba(0,0,0,0.1);
+    }}
+    
+    /* Scrollable report area */
+    .report-scrollable {{
+        max-height: 80vh;
+        overflow-y: auto;
+        padding-right: 10px;
+        margin-top: 1rem;
+        scrollbar-width: thin;
+    }}
+    
+    .report-scrollable::-webkit-scrollbar {{
+        width: 6px;
+    }}
+    
+    .report-scrollable::-webkit-scrollbar-track {{
+        background: #f1f1f1;
+        border-radius: 3px;
+    }}
+    
+    .report-scrollable::-webkit-scrollbar-thumb {{
+        background: #2e7d32;
+        border-radius: 3px;
+    }}
+    
+    /* Text styling */
+    html, body, [class*="css"], .stMarkdown, .stSubheader, .stTitle, .stCaption,
+    .stAlert, .stInfo, .stSuccess, .stWarning, .stError,
+    .stSelectbox, .stSlider, .stTextInput, label,
+    .stSidebar * {{
+        color: #000000 !important;
+        font-family: {font_family};
+        direction: {direction};
+        text-align: {text_align};
+    }}
+    
+    /* Headings */
+    h1, h2, h3, h4, h5, h6 {{
+        font-weight: 700 !important;
+        letter-spacing: -0.02em;
+    }}
+    
+    /* Report container */
+    .report-container {{
+        background: #ffffff !important;
+        border-radius: 28px;
+        padding: 2rem;
+        border: none;
+        box-shadow: 0 20px 35px -10px rgba(0,0,0,0.15);
+        line-height: 1.7;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        animation: fadeSlideUp 0.5s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+    }}
+    
+    @keyframes fadeSlideUp {{
+        from {{
+            opacity: 0;
+            transform: translateY(20px);
+        }}
+        to {{
+            opacity: 1;
+            transform: translateY(0);
+        }}
+    }}
+    
+    .report-container:hover {{
+        box-shadow: 0 25px 40px -12px rgba(0,0,0,0.2);
+    }}
+    
+    .report-container hr {{
+        border: none;
+        height: 2px;
+        background: linear-gradient(90deg, #1b5e20, #2e7d32, #1b5e20);
+        margin: 1.2rem 0;
+    }}
+    
+    /* Buttons */
+    .stButton>button {{
+        width: 100%;
+        background: linear-gradient(135deg, #1b5e20, #2e7d32);
+        color: white !important;
+        font-size: 1.1rem;
+        font-weight: 600;
+        padding: 0.75rem 1.5rem;
+        border-radius: 40px;
+        border: none;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }}
+    
+    .stButton>button:hover {{
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+        background: linear-gradient(135deg, #2e7d32, #1b5e20);
+    }}
+    
+    /* Images */
+    img {{
+        border-radius: 20px;
+        box-shadow: 0 12px 24px rgba(0,0,0,0.1);
+        transition: transform 0.3s ease;
+        max-width: 100%;
+    }}
+    
+    img:hover {{
+        transform: scale(1.02);
+    }}
+    
+    /* Info box */
+    .stInfo {{
+        background: rgba(0,0,0,0.05) !important;
+        border-radius: 16px !important;
+        padding: 1rem !important;
+        border-left: 6px solid #1b5e20 !important;
+    }}
+    
+    /* Expander */
+    .streamlit-expanderHeader {{
+        font-weight: 600 !important;
+        background: rgba(0,0,0,0.02) !important;
+        border-radius: 12px !important;
+    }}
+    
+    /* Print styles */
+    @media print {{
+        body * {{
+            visibility: hidden;
+        }}
+        .report-container, .report-container * {{
+            visibility: visible;
+        }}
+        .report-container {{
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            margin: 0;
+            padding: 20px;
+            box-shadow: none;
+        }}
+        .stApp, .stApp > div, [data-testid="stColumn"] {{
+            background: white !important;
+        }}
+        .stButton, .stSidebar, .stMarkdown:has(button) {{
+            display: none !important;
+        }}
+    }}
     </style>
 """, unsafe_allow_html=True)
 
@@ -206,17 +672,17 @@ with c2:
         # Analysis button
         if st.button(ui["btn_analyze"]):
             with st.spinner(ui["spinner"]):
-                # Step 1: plant detection
+                # Preprocess image
                 proc_img = img.convert("RGB").resize((224, 224))
                 img_array = np.array(proc_img) / 255.0
                 img_array = np.expand_dims(img_array, axis=0)
                 
+                # Plant detection
                 plant_pred = plant_detector.predict(img_array, verbose=0)
                 plant_conf = float(plant_pred[0][0])
                 is_plant = plant_conf > PLANT_THRESHOLD
                 
                 if not is_plant:
-                    # Not a plant – generate unknown report
                     label = "UNKNOWN"
                     best_conf = plant_conf
                     if is_ar:
@@ -224,13 +690,12 @@ with c2:
                     else:
                         st.warning("⚠️ The image does not appear to be a plant leaf. Please upload a clear image of a supported crop (pepper, potato, tomato).")
                 else:
-                    # Step 2: disease classification
+                    # Disease classification
                     raw_preds = disease_model.predict(img_array, verbose=0)
                     best_idx = np.argmax(raw_preds)
                     best_conf = float(np.max(raw_preds))
                     label = class_names[best_idx]
                     
-                    # Check confidence threshold for disease
                     if best_conf < DISEASE_THRESHOLD:
                         label = "UNKNOWN"
                         if is_ar:
@@ -241,12 +706,12 @@ with c2:
                         identified_text = arabic_classes.get(label, label) if is_ar else label.replace('___', ' | ')
                         st.success(f"{identified_text} ✓")
                 
-                # Generate report (either unknown or disease)
+                # Generate report
                 full_report = get_detailed_report(label, t_input, s_input_raw, w_input_raw, best_conf, is_ar)
                 st.session_state.saved_report = full_report
                 st.session_state.analysis_done = True
         
-        # Show report if analysis was done
+        # Show report if analysis done
         if st.session_state.analysis_done and st.session_state.saved_report:
             st.markdown("---")
             st.markdown("**📊 نتائج التحليل**" if is_ar else "**📊 Analysis Results**")
